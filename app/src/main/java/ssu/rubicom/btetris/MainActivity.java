@@ -2,10 +2,13 @@ package ssu.rubicom.btetris;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import ssu.rubicom.tetris.CTetris;
 import ssu.rubicom.tetris.Tetris;
@@ -18,9 +21,13 @@ public class MainActivity extends AppCompatActivity {
     private boolean gameStarted = false;
     private TetrisModel myTetModel;
     private Random random;
-    private CTetris.TetrisState state;
+    private CTetris.TetrisState state, gameState, savedState;
     private int dy = 25, dx = 15;
     private char currBlk, nextBlk;
+    private TimerHandler job;
+    private Timer t;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +64,30 @@ public class MainActivity extends AppCompatActivity {
 
         setButtonsState(false);
     }
+
+
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if(savedState == Tetris.TetrisState.Running) {
+           enableTimer();
+        }
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if(gameState == Tetris.TetrisState.Running) {
+            disableTimer();
+            savedState = gameState;
+        }
+
+    }
+
+
     private void setButtonsState(boolean flag) {
         pauseBtn.setEnabled(flag);
         settingBtn.setEnabled(false);
@@ -68,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
         rightArrowBtn.setEnabled(flag);
         downArrowBtn.setEnabled(flag);
         dropBtn.setEnabled(flag);
-        topLeftBtn.setEnabled(false); // always disabled
+        topLeftBtn.setEnabled(false); // always disablede
         topRightBtn.setEnabled(false); // always disabled
     }
     private View.OnClickListener OnClickListener = new View.OnClickListener() {
@@ -77,10 +108,13 @@ public class MainActivity extends AppCompatActivity {
             int id = v.getId();
             switch (id) {
                 case R.id.startBtn: key = 'N';
+                //game Start!!
                     if (gameStarted == false) {
                         gameStarted = true;
+                        gameState = Tetris.TetrisState.Running;
                         setButtonsState(true);
                         startBtn.setText("Q"); // 'Q' means Quit.
+                        enableTimer();
                         Toast.makeText(MainActivity.this, "Game Started!", Toast.LENGTH_SHORT).show();
                         try {
                             random = new Random();
@@ -102,8 +136,11 @@ public class MainActivity extends AppCompatActivity {
                     else {
                         gameStarted = false;
                         setButtonsState(false);
+                        disableTimer();
                         startBtn.setText("N"); // 'N' means New Game.
                         Toast.makeText(MainActivity.this, "Game Over!", Toast.LENGTH_SHORT).show();
+                        gameState = Tetris.TetrisState.Finished;
+
                     }
                     return;
                 case R.id.pauseBtn: key = 'P'; break;
@@ -125,10 +162,12 @@ public class MainActivity extends AppCompatActivity {
                     myBlkView.accept(myTetModel.getBlock(nextBlk));
                     myBlkView.invalidate();
                     if (state == Tetris.TetrisState.Finished) {
+                        disableTimer();
                         gameStarted = false;
                         setButtonsState(false);
                         startBtn.setText("N");
                         Toast.makeText(MainActivity.this, "Game Over!", Toast.LENGTH_SHORT).show();
+                        gameState = Tetris.TetrisState.Finished;
                         //Toast.makeText(MainActivity.this,"dkssud",Toast.LENGTH_SHORT).show();
                     }
                 }
@@ -138,4 +177,44 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
+
+    private class TimerHandler extends TimerTask{
+        @Override
+        public void run() {
+
+            try {
+                state = myTetModel.accept('s');
+                myTetView.accept(myTetModel.board.oScreen);
+                if (state == Tetris.TetrisState.NewBlock){
+                    currBlk = nextBlk;
+                    nextBlk = (char) ('0' + random.nextInt(myTetModel.board.nBlockTypes));
+                    state = myTetModel.accept(currBlk);
+                    myTetView.accept(myTetModel.board.oScreen);
+                    myBlkView.accept(myTetModel.getBlock(nextBlk));
+                    myBlkView.invalidate();
+                    if (state == Tetris.TetrisState.Finished) {
+                        gameStarted = false;
+                        setButtonsState(false);
+                        startBtn.setText("N");
+                        Toast.makeText(MainActivity.this, "Game Over!", Toast.LENGTH_SHORT).show();
+                        gameState = Tetris.TetrisState.Finished;
+                        //Toast.makeText(MainActivity.this,"dkssud",Toast.LENGTH_SHORT).show();
+                    }
+                }
+                myTetView.invalidate();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void enableTimer() {
+        t = new Timer();
+        job = new TimerHandler();
+        t.scheduleAtFixedRate(job, 1000, 1000);
+    }
+
+    private void disableTimer() {
+        t.cancel();
+    }
 }
