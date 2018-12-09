@@ -1,5 +1,6 @@
 package ssu.rubicom.btetris;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -26,6 +27,7 @@ public class MainActivity extends AppCompatActivity {
     private char currBlk, nextBlk;
     private TimerHandler job;
     private Timer t;
+    private String intent_result;
 
 
 
@@ -72,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         if(savedState == Tetris.TetrisState.Running) {
-           enableTimer();
+            enableTimer();
         }
 
     }
@@ -90,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void setButtonsState(boolean flag) {
         pauseBtn.setEnabled(flag);
-        settingBtn.setEnabled(false);
+        settingBtn.setEnabled(flag);
         modeBtn.setEnabled(false);
         reservedBtn.setEnabled(false);
 
@@ -102,13 +104,14 @@ public class MainActivity extends AppCompatActivity {
         topLeftBtn.setEnabled(false); // always disablede
         topRightBtn.setEnabled(false); // always disabled
     }
-    private View.OnClickListener OnClickListener = new View.OnClickListener() {
+    public View.OnClickListener OnClickListener = new View.OnClickListener() {
         public void onClick(View v) {
+            Intent intent;
             char key;
             int id = v.getId();
             switch (id) {
                 case R.id.startBtn: key = 'N';
-                //game Start!!
+                    //game Start!!
                     if (gameStarted == false) {
                         gameStarted = true;
                         gameState = Tetris.TetrisState.Running;
@@ -149,6 +152,12 @@ public class MainActivity extends AppCompatActivity {
                 case R.id.rightArrowBtn: key = 'd'; break;
                 case R.id.downArrowBtn: key = 's'; break;
                 case R.id.dropBtn: key = ' '; break;
+                case R.id.settingBtn: key = 'n';
+                    intent = new Intent(v.getContext(), SettingActivity.class);
+                    Toast.makeText(v.getContext(), "새창이 뜬다", Toast.LENGTH_SHORT).show();
+                    startActivityForResult(intent, 100);
+                    break;
+
                 default: return;
             }
             try {
@@ -178,6 +187,19 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+
+
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if(resultCode == RESULT_OK) {
+            switch (requestCode) {
+                case 100:
+                    intent_result = data.getStringExtra("result");
+                    Toast.makeText(this, intent_result, Toast.LENGTH_LONG).show();
+                    break;
+            }
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
     private class TimerHandler extends TimerTask{
         @Override
         public void run() {
@@ -198,7 +220,6 @@ public class MainActivity extends AppCompatActivity {
                         startBtn.setText("N");
                         Toast.makeText(MainActivity.this, "Game Over!", Toast.LENGTH_SHORT).show();
                         gameState = Tetris.TetrisState.Finished;
-                        //Toast.makeText(MainActivity.this,"dkssud",Toast.LENGTH_SHORT).show();
                     }
                 }
                 myTetView.invalidate();
